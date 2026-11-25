@@ -1,0 +1,23 @@
+{
+  "name": "balloon-fit-webgpu",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Hot-air balloon gore pattern, WebGPU inflation and deformation inspection workbench",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "smoke:webgpu": "node scripts/smoke-webgpu.mjs"
+  },
+  "dependencies": {
+    "wgpu-matrix": "3.4.2"
+  },
+  "devDependencies": {
+    "@webgpu/types": "0.1.74",
+    "playwright-core": "^1.65.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  }
+}
