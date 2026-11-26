@@ -13,6 +13,14 @@ credentials*.json
 .npmrc
 .pypirc
 node_modules/
+dist/
+*.log
+browser-check.png
+pattern-check.png
+shape-check.png
+cold-check.png
+check-check.png
+cold-4k-*.png
 __pycache__/
 .venv/
 venv/

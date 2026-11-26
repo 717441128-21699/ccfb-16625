@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%2338bdf8'/%3E%3Cstop offset='1' stop-color='%23f97316'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M32 4c14 0 24 12 24 28 0 15-10 24-18 26H26C18 56 8 47 8 32 8 16 18 4 32 4z'/%3E%3Crect x='24' y='58' width='16' height='5' rx='2' fill='%2392400e'/%3E%3C/svg%3E"
+    />
+    <title>云帆 WebGPU 热气球定制充形工作室</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">球</div>
+          <div>
+            <h1>云帆 · 定制造型球充形工作台</h1>
+            <p>20 条纵向裁片 / 每条 60 块布 / WebGPU 压力—拉伸解算</p>
+          </div>
+        </div>
+        <nav class="tabs" aria-label="工作页面">
+          <button class="tab active" data-view="pattern">① 裁片图案页</button>
+          <button class="tab" data-view="shape">② 充气形状页</button>
+          <button class="tab" data-view="cold">③ 冷充立起页</button>
+          <button class="tab" data-view="check">④ 变形检查页</button>
+        </nav>
+        <div class="gpu-badge" id="gpu-badge">WebGPU 初始化中…</div>
+      </header>
+
+      <main class="main">
+        <!-- Pattern page -->
+        <section class="page active" data-page="pattern">
+          <aside class="panel tool-panel">
+            <h2>图案工具</h2>
+            <label class="control">
+              <span>自编图案 / 球形贴图</span>
+              <div class="button-grid">
+                <button data-pattern="regatta" class="pattern-preset active">赛舟色带</button>
+                <button data-pattern="checker" class="pattern-preset">校准棋盘</button>
+                <button data-pattern="sun" class="pattern-preset">云帆旭日</button>
+                <button data-pattern="flame" class="pattern-preset">烈焰裁片</button>
+              </div>
+            </label>
+
+            <div class="tool-group">
+              <button class="tool active" data-tool="brush">画笔</button>
+              <button class="tool" data-tool="line">直线</button>
+              <button class="tool" data-tool="text">文字</button>
+              <button class="tool" data-tool="eraser">橡皮</button>
+            </div>
+
+            <label class="control">
+              <span>颜色 <b id="color-value">#e53935</b></span>
+              <input id="brush-color" type="color" value="#e53935" />
+            </label>
+            <label class="control">
+              <span>笔宽 / 字号倍数 <b id="brush-size-value">8 px</b></span>
+              <input id="brush-size" type="range" min="2" max="42" value="8" />
+            </label>
+            <label class="control">
+              <span>文字内容</span>
+              <input id="text-input" type="text" value="云帆 AERO" maxlength="28" />
+            </label>
+            <label class="check">
+              <input id="symmetry" type="checkbox" checked />
+              <span>同步绘制到全部 20 条裁片</span>
+            </label>
+            <label class="check">
+              <input id="pattern-grid" type="checkbox" checked />
+              <span>显示裁片和 60 块布网格</span>
+            </label>
+            <label class="control">
+              <span>当前高亮裁片 <b id="gore-value">第 1 条</b></span>
+              <input id="selected-gore" type="range" min="0" max="19" value="0" />
+            </label>
+            <div class="button-row">
+              <button id="clear-pattern" class="btn danger">清空</button>
+              <button id="send-to-check" class="btn primary">送去变形检查 →</button>
+            </div>
+            <div class="info-card">
+              <h3>平面裁片坐标</h3>
+              <p>横向为 20 条裁片，纵向为每条裁片的 60 块布。画布文字和直线会作为材质坐标送入 WebGPU，鼓包处自然弯曲。</p>
+              <p class="tiny">提示：选择“直线”后拖拽；开启同步可让每个裁片获得相同标志。</p>
+            </div>
+          </aside>
+
+          <div class="pattern-stage">
+            <div class="canvas-scroll">
+              <canvas id="pattern-canvas" aria-label="裁片图案编辑器"></canvas>
+            </div>
+            <div class="stage-caption">平面图案母版 · 2000 × 1560 px · 每格对应一块布</div>
+          </div>
+
+          <aside class="panel spec-panel">
+            <h2>裁片数据</h2>
+            <div class="stat"><span>纵向裁片</span><b>20 条</b></div>
+            <div class="stat"><span>每裁片布块</span><b>60 块</b></div>
+            <div class="stat"><span>布片总数</span><b>1,200 块</b></div>
+            <div class="stat"><span>GPU 细分顶点</span><b id="pattern-vertices">19,481</b></div>
+            <div class="stat"><span>三角形</span><b>38,400</b></div>
+            <h3>可编球形</h3>
+            <div class="shape-mini-list">
+              <button data-shape-jump="classic" class="shape-mini active">经典水滴</button>
+              <button data-shape-jump="broad" class="shape-mini">宽体灯笼</button>
+              <button data-shape-jump="slender" class="shape-mini">修长探险</button>
+              <button data-shape-jump="shoulder" class="shape-mini">庆典高肩</button>
+            </div>
+            <div class="info-card good">
+              <h3>工作流</h3>
+              <p>画图案 → WebGPU 缝合裁片 → 按压差和拉伸刚度解算 → 检查直线弯曲与 2% 轮廓公差。</p>
+            </div>
+          </aside>
+        </section>
+
+        <!-- Shape page -->
+        <section class="page" data-page="shape">
+          <aside class="panel">
+            <h2>球形与材料</h2>
+            <div class="shape-cards" id="shape-cards"></div>
+
+            <label class="control">
+              <span>内外压差 Δp <b id="pressure-value">240 Pa</b></span>
+              <input id="pressure" type="range" min="40" max="700" value="240" />
+            </label>
+            <label class="control">
+              <span>布料拉伸刚度 EA <b id="fabric-value">260 kN/m</b></span>
+              <input id="fabric" type="range" min="40" max="520" value="260" />
+            </label>
+            <label class="control">
+              <span>加强带刚度 <b id="tape-value">2.5 MN</b></span>
+              <input id="tape" type="range" min="400" max="6000" value="2500" />
+            </label>
+            <label class="control">
+              <span>鼓包显示幅度 <b id="bulge-value">1.00×</b></span>
+              <input id="bulge" type="range" min="0.2" max="2.4" step="0.05" value="1" />
+            </label>
+
+            <div class="toggle-row">
+              <label class="check"><input id="show-tapes-shape" type="checkbox" checked /><span>加强带</span></label>
+              <label class="check"><input id="wireframe-shape" type="checkbox" /><span>细分网格</span></label>
+            </div>
+            <label class="control">
+              <span>着色诊断</span>
+              <select id="view-mode-shape">
+                <option value="0">图案材质</option>
+                <option value="1">布料环向应变热力图</option>
+                <option value="2">加强带张力热力图</option>
+                <option value="3">UV 坐标棋盘</option>
+              </select>
+            </label>
+            <div class="button-row">
+              <button class="btn" data-camera="ground">地面视角</button>
+              <button class="btn" data-camera="air">空中视角</button>
+            </div>
+            <div class="button-row">
+              <button class="btn" data-camera="top">俯视</button>
+              <button class="btn" data-camera="inspect">近景检查</button>
+            </div>
+          </aside>
+
+          <div class="viewport">
+            <div class="gpu-mount" data-mount="shape"></div>
+            <div class="viewport-hud">
+              <span>拖拽旋转 · 滚轮缩放 · 地面/空中/俯视预设</span>
+              <span id="fps-shape" class="fps">-- FPS</span>
+            </div>
+            <div class="cam-floating">
+              <button class="btn primary" data-camera="ground">地面</button>
+              <button class="btn primary" data-camera="air">空中</button>
+            </div>
+          </div>
+
+          <aside class="panel metric-panel">
+            <h2>轮廓验收</h2>
+            <div id="shape-verdict" class="verdict pending">正在读取 GPU 解算…</div>
+            <div class="stat"><span>加强带轮廓最大偏差</span><b id="metric-tape-dev">--</b></div>
+            <div class="stat"><span>含布片鼓包偏差</span><b id="metric-panel-dev">--</b></div>
+            <div class="stat"><span>最大鼓包高度</span><b id="metric-sag">--</b></div>
+            <div class="stat"><span>最大环向应变</span><b id="metric-hoop">--</b></div>
+            <div class="stat"><span>最大经向应变</span><b id="metric-merid">--</b></div>
+            <div class="stat"><span>加强带最大张力</span><b id="metric-tape-force">--</b></div>
+            <div class="info-card">
+              <h3>理论轮廓</h3>
+              <p id="shape-formula"></p>
+              <p class="tiny">GPU 每帧按 p·r 膜力、EA 应变和跨带悬链鼓包重算顶点；右侧数值由同一组方程复核。</p>
+            </div>
+            <button id="goto-cold" class="btn primary wide">观看冷充到立起 →</button>
+          </aside>
+        </section>
+
+        <!-- Cold page -->
+        <section class="page" data-page="cold">
+          <aside class="panel">
+            <h2>充放气时间轴</h2>
+            <button id="cold-play" class="btn primary wide">暂停</button>
+            <label class="control">
+              <span>过程进度 <b id="cold-time-value">0%</b></span>
+              <input id="cold-progress" type="range" min="0" max="1000" value="0" />
+            </label>
+            <label class="control">
+              <span>播放速度 <b id="cold-speed-value">1.0×</b></span>
+              <input id="cold-speed" type="range" min="0.25" max="2" step="0.25" value="1" />
+            </label>
+            <button id="cold-replay" class="btn wide">重新从草地平铺开始</button>
+
+            <h3>阶段</h3>
+            <div id="cold-phase" class="phase-card"></div>
+
+            <h3>性能目标</h3>
+            <label class="check">
+              <input id="four-k" type="checkbox" />
+              <span>4K 压测：后端缓冲锁定 3840×2160</span>
+            </label>
+            <label class="control">
+              <span>渲染缩放 <b id="resolution-value">100%</b></span>
+              <input id="resolution-scale" type="range" min="0.5" max="2" step="0.1" value="1" />
+            </label>
+            <div class="stat"><span>GPU 帧时间</span><b id="cold-frame-ms">-- ms</b></div>
+            <div class="stat"><span>渲染分辨率</span><b id="cold-resolution">--</b></div>
+            <div class="stat"><span>帧率</span><b id="fps-cold">-- FPS</b></div>
+          </aside>
+
+          <div class="viewport cold-viewport">
+            <div class="gpu-mount" data-mount="cold"></div>
+            <div class="timeline-overlay">
+              <div class="timeline-labels">
+                <span>平铺</span><span>冷充鼓起</span><span>横卧饱满</span><span>点火</span><span>热充立起</span>
+              </div>
+              <div class="timeline-track"><div id="cold-track-fill"></div></div>
+            </div>
+            <div class="viewport-hud"><span>草地冷充 → 燃烧器热充 → 立起</span><span id="fps-cold-hud" class="fps">-- FPS</span></div>
+          </div>
+
+          <aside class="panel">
+            <h2>现场视角</h2>
+            <div class="button-row">
+              <button class="btn primary" data-camera="ground">地面近景</button>
+              <button class="btn" data-camera="air">空中俯瞰</button>
+            </div>
+            <div class="button-row">
+              <button class="btn" data-camera="top">正俯视</button>
+              <button class="btn" data-camera="inspect">吹口检查</button>
+            </div>
+            <div class="info-card">
+              <h3>解算状态</h3>
+              <div class="stat"><span>冷充饱满度</span><b id="cold-inflation">0%</b></div>
+              <div class="stat"><span>立起度</span><b id="cold-erection">0%</b></div>
+              <div class="stat"><span>瞬时压差</span><b id="cold-pressure">-- Pa</b></div>
+              <div class="stat"><span>火焰强度</span><b id="cold-flame">0%</b></div>
+            </div>
+            <div class="info-card good">
+              <h3>60 fps 预算</h3>
+              <p>19,481 个解算顶点 / 38,400 个三角形，单次 compute dispatch；4K 下主要压力来自片元着色和纹理采样。</p>
+            </div>
+          </aside>
+        </section>
+
+        <!-- Check page -->
+        <section class="page" data-page="check">
+          <aside class="panel">
+            <h2>变形检查设置</h2>
+            <button id="run-acceptance" class="btn primary wide">运行 2% 轮廓验收</button>
+            <button id="load-calibration" class="btn wide">载入直线校准图案</button>
+            <label class="control">
+              <span>检查高度 t <b id="check-t-value">0.55</b></span>
+              <input id="check-t" type="range" min="8" max="92" value="55" />
+            </label>
+            <label class="control">
+              <span>跨裁片取样位置 <b id="check-gore-value">第 10 条</b></span>
+              <input id="check-gore" type="range" min="0" max="19" value="9" />
+            </label>
+            <label class="control">
+              <span>诊断着色</span>
+              <select id="view-mode-check">
+                <option value="0">变形图案</option>
+                <option value="1">布料应变</option>
+                <option value="2">加强带张力</option>
+                <option value="3">UV 拉伸</option>
+              </select>
+            </label>
+            <label class="check"><input id="show-tapes-check" type="checkbox" checked /><span>显示加强带</span></label>
+            <label class="check"><input id="wireframe-check" type="checkbox" /><span>显示计算细分线</span></label>
+            <div class="button-row">
+              <button class="btn" data-camera="close">鼓包近景</button>
+              <button class="btn" data-camera="air">空中视角</button>
+            </div>
+            <div class="info-card">
+              <h3>对应关系</h3>
+              <p>平面直线连接两条加强带。GPU 鼓包量 h 由 Δp、裁片跨宽 w 和布料膜力求出；右侧剖面按同一 h 绘制，弯曲矢高应完全一致。</p>
+            </div>
+          </aside>
+
+          <div class="viewport check-viewport">
+            <div class="gpu-mount" data-mount="check"></div>
+            <div class="viewport-hud"><span>图案随布片拉伸；黄色线为加强带</span><span id="fps-check" class="fps">-- FPS</span></div>
+          </div>
+
+          <aside class="panel metric-panel">
+            <h2>直线 / 鼓包核对</h2>
+            <canvas id="sag-chart" width="360" height="190" aria-label="直线弯曲和鼓包高度图"></canvas>
+            <div id="acceptance-verdict" class="verdict pending">尚未运行验收</div>
+            <div class="stat"><span>理论跨宽 w</span><b id="check-width">-- m</b></div>
+            <div class="stat"><span>GPU 鼓包矢高 h</span><b id="check-sag">-- mm</b></div>
+            <div class="stat"><span>曲线端点直线偏差</span><b id="check-line-bend">-- mm</b></div>
+            <div class="stat"><span>h / 裁片宽度</span><b id="check-ratio">--%</b></div>
+            <div class="stat"><span>轮廓公差结论</span><b id="check-contour">--</b></div>
+            <div class="stat"><span>实测帧率</span><b id="check-fps">--</b></div>
+          </aside>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
